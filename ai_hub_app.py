@@ -1,4 +1,3 @@
-# ai_hub_app.py
 import streamlit as st
 import json
 from datetime import datetime
@@ -9,6 +8,7 @@ import re
 import subprocess
 import sys
 from PyPDF2 import PdfReader
+from pathlib import Path
 
 # ----------------- AUTO-FIX FOR DOCX IMPORT -----------------
 try:
@@ -42,7 +42,6 @@ st.markdown("""
         border: 2px solid #e5e5e5;
         padding: 10px 20px;
     }
-    /* Stop button styling */
     .stop-btn {
         flex-shrink: 0;
         background-color: #ff4b4b !important;
@@ -50,15 +49,14 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: bold;
     }
-    /* --- FILE UPLOADER STYLE CLEANUP --- */
     [data-testid="stFileUploader"] > section {
         padding: 0 !important;
     }
     [data-testid="stFileUploader"] > section > div {
-        display: none !important; /* Hides drag-drop text */
+        display: none !important;
     }
     [data-testid="stFileUploader"] label {
-        display: none !important; /* Hides label text */
+        display: none !important;
     }
     [data-testid="stFileUploader"] div div div button {
         background-color: #10a37f !important;
@@ -69,19 +67,23 @@ st.markdown("""
         font-size: 14px !important;
         border: none !important;
     }
+    [data-testid="stFileUploaderFile"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
+# ----------------- OLLAMA CONFIG -----------------
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 # ----------------- STREAM RESPONSE -----------------
 def stream_response(prompt, context_text="", model="llava"):
-    """Stream chat response from Ollama model using optional context."""
     try:
         full_prompt = (
             f"Use the following document context to answer questions accurately:\n\n"
-            f"{context_text}\n\n"
-            f"User: {prompt}\n\nAssistant:"
+            f"{context_text}\n\nUser: {prompt}\n\nAssistant:"
         ) if context_text else prompt
 
         payload = {"model": model, "prompt": full_prompt, "stream": True}
@@ -112,7 +114,7 @@ def stream_response(prompt, context_text="", model="llava"):
     except Exception as e:
         return f"⚠️ Error connecting to Ollama: {e}"
 
-# ----------------- FILE READING HELPERS -----------------
+# ----------------- FILE TEXT EXTRACTORS -----------------
 def extract_text_from_pdf(uploaded_file):
     try:
         reader = PdfReader(uploaded_file)
@@ -135,26 +137,19 @@ def extract_text_from_txt(uploaded_file):
         return f"⚠️ Error reading TXT: {e}"
 
 def extract_text_from_image_ollama(uploaded_file, model="llava"):
-    """Use Ollama vision model to extract text from image."""
     try:
         image_bytes = uploaded_file.getvalue()
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         payload = {
             "model": model,
-            "prompt": (
-                "You are an OCR assistant. Carefully read all visible text in this image "
-                "and return ONLY the extracted text. Do not describe the image."
-            ),
+            "prompt": "You are an OCR assistant. Extract ONLY the text visible in this image.",
             "images": [image_b64],
             "stream": False
         }
         r = requests.post(OLLAMA_URL, json=payload, timeout=120)
         r.raise_for_status()
-        try:
-            data = r.json()
-            return data.get("response", "").strip()
-        except json.JSONDecodeError:
-            return "⚠️ Could not parse OCR response."
+        data = r.json()
+        return data.get("response", "").strip()
     except Exception as e:
         return f"⚠️ Error: {e}"
 
@@ -221,10 +216,9 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# ----------------- CHAT INPUT ROW -----------------
+# ----------------- CHAT INPUT + FILE UPLOAD -----------------
 col_upload, col_input, col_stop = st.columns([1, 8, 1])
 
-# Left: File upload (button only)
 with col_upload:
     uploaded_files = st.file_uploader(
         "",
@@ -233,30 +227,60 @@ with col_upload:
         label_visibility="collapsed"
     )
 
-# Middle: Chat input
 with col_input:
     prompt = st.chat_input("Message your AI...")
 
-# Right: Stop button
 with col_stop:
     stop_clicked = st.button("🛑", key="stop_btn", help="Stop generation", type="secondary")
 
-# ----------------- FILE EXTRACTION -----------------
+# ----------------- FILE ICON HELPER -----------------
+def get_file_icon(file_name: str):
+    ext = Path(file_name).suffix.lower()
+    if ext == ".pdf":
+        return "📕"
+    elif ext in [".docx", ".doc"]:
+        return "📘"
+    elif ext == ".txt":
+        return "📄"
+    elif ext in [".jpg", ".jpeg", ".png"]:
+        return "🖼️"
+    else:
+        return "📁"
+
+# ----------------- FILE PREVIEW SECTION -----------------
 if uploaded_files:
     all_texts = []
-    with st.spinner("Extracting text from uploaded files..."):
-        for file in uploaded_files:
-            if file.type == "application/pdf":
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    for file in uploaded_files:
+        icon = get_file_icon(file.name)
+        file_type = file.type
+        file_bytes = file.getvalue()
+
+        with st.expander(f"{icon} {file.name}"):
+            if file_type == "application/pdf":
+                # PDF Preview
+                pdf_base64 = base64.b64encode(file_bytes).decode("utf-8")
+                pdf_display = f'<iframe src="data:application/pdf;base64,{pdf_base64}" width="100%" height="500px"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
                 text = extract_text_from_pdf(file)
-            elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+
+            elif file_type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
                 text = extract_text_from_docx(file)
-            elif file.type.startswith("text/"):
+                st.text_area("📘 DOCX Preview", text[:2000], height=200)
+
+            elif file_type.startswith("text/"):
                 text = extract_text_from_txt(file)
-            elif file.type.startswith("image/"):
+                st.text_area("📄 Text Preview", text[:2000], height=200)
+
+            elif file_type.startswith("image/"):
+                st.image(file_bytes, caption=file.name, use_container_width=True)
                 text = extract_text_from_image_ollama(file)
+
             else:
                 text = "⚠️ Unsupported file format."
-            all_texts.append(f"--- FILE: {file.name} ---\n{text}\n")
+
+        all_texts.append(f"--- FILE: {file.name} ---\n{text}\n")
 
     st.session_state.file_context = "\n".join(all_texts)
     st.session_state.uploaded_files = [f.name for f in uploaded_files]
@@ -294,7 +318,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.8rem;'>
-        Chatbot powered by Ollama (LLaVA) • Compact file upload button 📁 beside chat box 💬
+        Chatbot powered by Ollama (LLaVA)
     </div>
     """,
     unsafe_allow_html=True
