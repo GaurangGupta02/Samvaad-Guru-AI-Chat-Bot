@@ -1,4 +1,4 @@
-# 🤖 ChatGPT-Clone-AI-Chatbot
+# 🤖 Samvaad-Guru-AI-Chat-Bot
 
 This project is an advanced **Streamlit-based AI assistant** that unifies **text chat**, **document understanding**, and **image OCR** in a single interface using **LLaVA** through **Ollama**.
 
@@ -41,18 +41,15 @@ It allows users to:
 
 ### 1. Clone the Repository
 
-```bash
-git clone https://github.com/GaurangGupta02/ChatGPT-Clone-AI-Chatbot.git
-cd ChatGPT-Clone-AI-Chatbot
-```
+git clone https://github.com/GaurangGupta02/Samvaad-Guru-AI-Chat-Bot.git
+cd Samvaad-Guru-AI-Chat-Bot
 
 ### 2. Install Dependencies
 
 Make sure you have **Python 3.9+** installed.
 
-```bash
 pip install streamlit requests PyPDF2 python-docx
-```
+
 
 ### 3. Install and Run Ollama
 
@@ -61,15 +58,13 @@ Install Ollama from its official website:
 
 Pull the **LLaVA** model:
 
-```bash
 ollama pull llava
-```
 
 Then run Ollama’s local server:
 
-```bash
+
 ollama serve
-```
+
 
 This launches a local API at:
 `http://localhost:11434`
@@ -80,9 +75,7 @@ This launches a local API at:
 
 With Ollama running, start the Streamlit app:
 
-```bash
 streamlit run ai_hub_app.py
-```
 
 You’ll see the app running at:
 `http://localhost:8501`
@@ -129,3 +122,5 @@ This project is licensed under the **MIT License** — feel free to use, modify,
 ---
 
 > ⚡ *“Chat with your AI, read your files, and see your world — powered by LLaVA and Streamlit.”*
+
+```
