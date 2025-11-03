@@ -209,7 +209,7 @@ if st.session_state.chat_history:
             st.rerun()
 
 # ----------------- MAIN HEADER -----------------
-st.markdown('<h1 class="main-header">ChatGPT-Clone 📚 </h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">Samvaad Guru 📚 </h1>', unsafe_allow_html=True)
 
 # ----------------- CHAT DISPLAY -----------------
 for msg in st.session_state.messages:
@@ -318,7 +318,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.8rem;'>
-        Chatbot powered by Ollama (LLaVA)
+        Samvaad Guru Chatbot powered by Ollama (LLaVA)
     </div>
     """,
     unsafe_allow_html=True
