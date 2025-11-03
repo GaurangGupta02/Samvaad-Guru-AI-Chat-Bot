@@ -21,7 +21,7 @@ except ModuleNotFoundError:
 
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
-    page_title="AI Chat + Vision + Docs",
+    page_title="Samvaad Guru 📚",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -323,3 +323,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
